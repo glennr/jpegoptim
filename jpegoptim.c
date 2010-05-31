@@ -2,7 +2,7 @@
  * JPEGoptim
  * Copyright (c) Timo Kokkonen, 1996,2002,2004.
  *
- * requires libjpeg.a (from JPEG Group's JPEG software 
+ * requires libjpeg.a (from JPEG Group's JPEG software
  *                     release 6a or later...)
  *
  * $Id: jpegoptim.c,v 1.14 2009/09/30 07:16:58 tjko Exp $
@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,7 +37,7 @@
 #include <libgen.h>
 #endif
 
-#define VERSIO "1.2.3"
+#define VERSIO "1.2.4"
 
 #ifdef BROKEN_METHODDEF
 #undef METHODDEF
@@ -57,7 +58,7 @@ void fatal(const char *msg);
 
 struct my_error_mgr {
   struct jpeg_error_mgr pub;
-  jmp_buf setjmp_buffer;   
+  jmp_buf setjmp_buffer;
 };
 
 typedef struct my_error_mgr * my_error_ptr;
@@ -115,7 +116,7 @@ double average_rate = 0.0, total_save = 0.0;
 
 /*****************************************************************/
 
-METHODDEF(void) 
+METHODDEF(void)
 my_error_exit (j_common_ptr cinfo)
 {
   my_error_ptr myerr = (my_error_ptr)cinfo->err;
@@ -128,17 +129,17 @@ my_output_message (j_common_ptr cinfo)
 {
   char buffer[JMSG_LENGTH_MAX];
 
-  (*cinfo->err->format_message) (cinfo, buffer); 
+  (*cinfo->err->format_message) (cinfo, buffer);
   if (verbose_mode) printf(" (%s) ",buffer);
   global_error_counter++;
 }
 
 
-void p_usage(void) 
+void p_usage(void)
 {
  if (!quiet_mode) {
-  fprintf(stderr,"jpegoptim v" VERSIO 
-	  "  Copyright (c) Timo Kokkonen, 1996-2009.\n"); 
+  fprintf(stderr,"jpegoptim v" VERSIO
+	  "  Copyright (c) Timo Kokkonen, 1996-2009.\n");
 
   fprintf(stderr,
        "Usage: jpegoptim [options] <filenames> \n\n"
@@ -162,6 +163,9 @@ void p_usage(void)
     "  --strip-exif    strip Exif markers from output file\n"
     "  --strip-iptc    strip IPTC markers from output file\n"
     "  --strip-icc     strip ICC profile markers from output file\n"
+    "\n"
+    " Recursive Example:\n"
+    "  find . -iname *.jpg -exec jpegoptim -p -m60 --strip-all {} \\;\n"
     "\n\n");
  }
 
@@ -174,7 +178,7 @@ int delete_file(char *name)
 
   if (!name) return -1;
   if (verbose_mode > 1 && !quiet_mode) fprintf(stderr,"deleting: %s\n",name);
-  if ((retval=unlink(name)) && !quiet_mode) 
+  if ((retval=unlink(name)) && !quiet_mode)
     fprintf(stderr,"jpegoptim: error removing file: %s\n",name);
 
   return retval;
@@ -268,30 +272,30 @@ void write_markers(struct jpeg_decompress_struct *dinfo,
 
   mrk=dinfo->marker_list;
   while (mrk) {
-    if (save_com && mrk->marker == JPEG_COM) 
+    if (save_com && mrk->marker == JPEG_COM)
       jpeg_write_marker(cinfo,JPEG_COM,mrk->data,mrk->data_length);
 
-    if (save_iptc && mrk->marker == IPTC_JPEG_MARKER) 
+    if (save_iptc && mrk->marker == IPTC_JPEG_MARKER)
       jpeg_write_marker(cinfo,IPTC_JPEG_MARKER,mrk->data,mrk->data_length);
 
     if (save_exif && mrk->marker == EXIF_JPEG_MARKER) {
       if (!memcmp(mrk->data,EXIF_IDENT_STRING,EXIF_IDENT_STRING_SIZE)) {
-	jpeg_write_marker(cinfo,EXIF_JPEG_MARKER,mrk->data,mrk->data_length);
+	      jpeg_write_marker(cinfo,EXIF_JPEG_MARKER,mrk->data,mrk->data_length);
       }
     }
-     
+
     if (save_icc && mrk->marker == ICC_JPEG_MARKER) {
       if (!memcmp(mrk->data,ICC_IDENT_STRING,ICC_IDENT_STRING_SIZE)) {
-	jpeg_write_marker(cinfo,ICC_JPEG_MARKER,mrk->data,mrk->data_length);
+	      jpeg_write_marker(cinfo,ICC_JPEG_MARKER,mrk->data,mrk->data_length);
       }
     }
-     
+
     mrk=mrk->next;
   }
 }
 
 /*****************************************************************/
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
   char tmpfilename[MAXPATHLEN],tmpdir[MAXPATHLEN];
   char newname[MAXPATHLEN], dest_path[MAXPATHLEN];
@@ -301,7 +305,7 @@ int main(int argc, char **argv)
   long insize,outsize;
   double ratio;
   struct utimbuf time_save;
-  jpeg_saved_marker_ptr cmarker; 
+  jpeg_saved_marker_ptr cmarker;
 
 
   if (rcsid); /* so compiler won't complain about "unused" rcsid string */
@@ -327,12 +331,12 @@ int main(int argc, char **argv)
 			     "Try 'jpegoptim --help' for more information.\n");
     exit(1);
   }
- 
+
   /* parse command line parameters */
   while(1) {
     opt_index=0;
     if ((c=getopt_long(argc,argv,"d:hm:ntqvfVpo",long_options,&opt_index))
-	      == -1) 
+	      == -1)
       break;
 
     switch (c) {
@@ -352,10 +356,10 @@ int main(int argc, char **argv)
       break;
     case 'd':
       if (realpath(optarg,dest_path)==NULL || !is_directory(dest_path)) {
-	fatal("invalid argument for option -d, --dest");
+	      fatal("invalid argument for option -d, --dest");
       }
-      if (verbose_mode) 
-	fprintf(stderr,"Destination directory: %s\n",dest_path);
+      if (verbose_mode)
+	      fprintf(stderr,"Destination directory: %s\n",dest_path);
       dest=1;
       break;
     case 'v':
@@ -409,18 +413,18 @@ int main(int argc, char **argv)
       break;
 
     default:
-      if (!quiet_mode) 
-	fprintf(stderr,"jpegoptim: error parsing parameters.\n");
+      if (!quiet_mode)
+	      fprintf(stderr,"jpegoptim: error parsing parameters.\n");
     }
   }
 
 
-  if (verbose_mode && (quality>0)) 
+  if (verbose_mode && (quality>0))
     fprintf(stderr,"Image quality limit set to: %d\n",quality);
 
 
   /* loop to process the input files */
-  i=1;  
+  i=1;
   do {
    if (!argv[i][0]) continue;
    if (argv[i][0]=='-') continue;
@@ -431,14 +435,14 @@ int main(int argc, char **argv)
        strncpy(tmpdir,dest_path,sizeof(tmpdir));
        strncpy(newname,dest_path,sizeof(newname));
        if (tmpdir[strlen(tmpdir)-1] != '/') {
-	 strncat(tmpdir,"/",sizeof(tmpdir)-strlen(tmpdir));
-	 strncat(newname,"/",sizeof(newname)-strlen(newname));
+	       strncat(tmpdir,"/",sizeof(tmpdir)-strlen(tmpdir));
+	       strncat(newname,"/",sizeof(newname)-strlen(newname));
        }
        strncat(newname,(char*)basename(argv[i]),
-	       sizeof(newname)-strlen(newname));
+	     sizeof(newname)-strlen(newname));
      } else {
-       if (!splitdir(argv[i],tmpdir,sizeof(tmpdir))) 
-	 fatal("splitdir() failed!");
+       if (!splitdir(argv[i],tmpdir,sizeof(tmpdir)))
+	       fatal("splitdir() failed!");
        strncpy(newname,argv[i],sizeof(newname));
      }
      snprintf(tmpfilename,sizeof(tmpfilename),
@@ -452,7 +456,7 @@ int main(int argc, char **argv)
    }
    if (is_dir(infile,&time_save.actime,&time_save.modtime)) {
      fclose(infile);
-     if (verbose_mode) printf("directory: %s  skipped\n",argv[i]); 
+     if (verbose_mode) printf("directory: %s  skipped\n",argv[i]);
      continue;
    }
 
@@ -475,7 +479,7 @@ int main(int argc, char **argv)
    if (save_icc) jpeg_save_markers(&dinfo, ICC_JPEG_MARKER, 0xffff);
 
    jpeg_stdio_src(&dinfo, infile);
-   jpeg_read_header(&dinfo, TRUE); 
+   jpeg_read_header(&dinfo, TRUE);
 
    /* check for Exif/IPTC markers */
    exif_marker=NULL;
@@ -484,15 +488,15 @@ int main(int argc, char **argv)
    cmarker=dinfo.marker_list;
    while (cmarker) {
      if (cmarker->marker == EXIF_JPEG_MARKER) {
-       if (!memcmp(cmarker->data,EXIF_IDENT_STRING,EXIF_IDENT_STRING_SIZE)) 
-	 exif_marker=cmarker;
+       if (!memcmp(cmarker->data,EXIF_IDENT_STRING,EXIF_IDENT_STRING_SIZE))
+	       exif_marker=cmarker;
      }
      if (cmarker->marker == IPTC_JPEG_MARKER) {
        iptc_marker=cmarker;
      }
      if (cmarker->marker == ICC_JPEG_MARKER) {
-       if (!memcmp(cmarker->data,ICC_IDENT_STRING,ICC_IDENT_STRING_SIZE)) 
-	 icc_marker=cmarker;
+       if (!memcmp(cmarker->data,ICC_IDENT_STRING,ICC_IDENT_STRING_SIZE))
+	       icc_marker=cmarker;
      }
      cmarker=cmarker->next;
    }
@@ -500,7 +504,7 @@ int main(int argc, char **argv)
 
    if (!retry) {
      printf("%dx%d %dbit ",(int)dinfo.image_width,
-	    (int)dinfo.image_height,(int)dinfo.num_components*8);
+	   (int)dinfo.image_height,(int)dinfo.num_components*8);
 
      if (exif_marker) printf("Exif ");
      if (iptc_marker) printf("IPTC ");
@@ -538,7 +542,6 @@ int main(int argc, char **argv)
      fflush(stdout);
    }
 
-
    if (dest && !noaction) {
      if (file_exists(newname) && !overwrite_mode) {
        fprintf(stderr,"target file already exists!\n");
@@ -555,7 +558,7 @@ int main(int argc, char **argv)
      if ((outfile=tmpfile())==NULL) fatal("error opening temp file");
    } else {
      outfname=tmpfilename;
-     if ((outfile=fopen(outfname,"w"))==NULL) 
+     if ((outfile=fopen(outfname,"w"))==NULL)
        fatal("error opening target file");
    }
 
@@ -572,23 +575,21 @@ int main(int argc, char **argv)
       continue;
    }
 
-
    jpeg_stdio_dest(&cinfo, outfile);
 
    if (quality>=0 && !retry) {
      /* lossy "optimization" ... */
-
      cinfo.in_color_space=dinfo.out_color_space;
      cinfo.input_components=dinfo.output_components;
      cinfo.image_width=dinfo.image_width;
      cinfo.image_height=dinfo.image_height;
-     jpeg_set_defaults(&cinfo); 
+     jpeg_set_defaults(&cinfo);
      jpeg_set_quality(&cinfo,quality,TRUE);
      cinfo.optimize_coding = TRUE;
-     
+
      j=0;
      jpeg_start_compress(&cinfo,TRUE);
-     
+
      /* write markers */
      write_markers(&dinfo,&cinfo);
 
@@ -596,7 +597,7 @@ int main(int argc, char **argv)
        jpeg_write_scanlines(&cinfo,&buf[cinfo.next_scanline],
 			    dinfo.output_height);
      }
-     
+
      for (j=0;j<dinfo.output_height;j++) free(buf[j]);
      free(buf); buf=NULL;
    } else {
@@ -628,7 +629,7 @@ int main(int argc, char **argv)
    if (quality>=0 && outsize>=insize && !retry) {
      if (verbose_mode) printf("(retry w/lossless) ");
      retry=1;
-     goto retry_point; 
+     goto retry_point;
    }
 
    retry=0;
@@ -638,20 +639,22 @@ int main(int argc, char **argv)
    average_rate+=(ratio<0 ? 0.0 : ratio);
 
    if (outsize<insize || force) {
-        total_save+=(insize-outsize)/1024.0;
-	printf("optimized.\n");
-        if (noaction) continue;
-	if (verbose_mode > 1 && !quiet_mode) 
-	  fprintf(stderr,"renaming: %s to %s\n",outfname,newname);
-	if (rename(outfname,newname)) fatal("cannot rename temp file");
+     total_save+=(insize-outsize)/1024.0;
+	   printf("optimized.\n");
+     if (noaction) continue;
+	   if (verbose_mode >= 1 && !quiet_mode)
+	     fprintf(stderr,"renaming: %s to %s\n",outfname,newname);
+	   if (rename(outfname,newname)){
+	     printf( "Rename error: %s\n", strerror( errno ) );
+       fatal("cannot rename temp file");
+     }
    } else {
-	printf("skipped.\n");
-	if (!noaction) delete_file(outfname);
+	   printf("skipped.\n");
+	   if (!noaction) delete_file(outfname);
    }
-   
+
 
   } while (++i<argc);
-
 
   if (totals_mode&&!quiet_mode)
     printf("Average ""compression"" (%ld files): %0.2f%% (%0.0fk)\n",

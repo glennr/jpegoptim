@@ -8,13 +8,12 @@ REQUIREMENTS
 
 TESTED PLATFORMS
 	Linux
-	Solaris 
+	Solaris
 	Darwin/OSX (compiles fine as 64bit app on Snow Leopard)
-
 
 INSTALLATION
 	Installation should be very straightforward, just unpack the
-	tar file, make nesessary changes to the Makefile,  and then 
+	tar file, make nesessary changes to the Makefile,  and then
         compile the program. You may wanna do something like this:
 
 		zcat jpegoptim-1.2.3.tar.gz | tar xf -
@@ -24,11 +23,20 @@ INSTALLATION
 		make strip
 		make install
 
+USAGE
+
+  Basic Usage;
+    $ jpegoptim -p -o -dest=./compressed --strip-all -m90
+
+  To do a recursive find of all jpg files & optimize to 60%, preserving original timestamps, overwriting original files;
+    $ find . -iname *.jpg -exec jpegoptim -p -m60 --strip-all {} \;
 
 HISTORY
+  v1.2.4 - Improved error messaging for rename() calls by Glenn Roberts (Jun 2010)
+    minor code clean up.
 	v1.2.3 - IPTC marker support by Dustin Ward,
 		 ICC profile support by Dwight Kelly,
-		 minor fixes 
+		 minor fixes
 	v1.2.2 - Now Exif and COM markers are not discarded
                  (all other markers are discarded as before).
 	         New options --strip-all, --strip-exif, and --strip-com
@@ -41,14 +49,30 @@ HISTORY
 	v1.0a  - some changes in docs & makefile
 	v1.0   - first public release
 
+TROUBLESHOOTING
+  On OSX 10.5.x you might get an "Operation not permitted" error if your JPEGs are on a mounted volume. i.e.;
+    renaming: jpegoptim-0-4778.tmp to blah123.JPG
+    Rename error: Operation not permitted
+    jpegoptim: cannot rename temp file.
 
+  This might fixed with;
+    $ chflags -R nouchg .
+  (As per http://stackoverflow.com/questions/1765232/subclipse-cant-rename-file-os-x)
+
+CONTRIBUTORS
+  Timo
+  ...
+  Glenn Roberts
 
 LATEST VERSION
 
 	Latest version is always available from:
 		http://www.iki.fi/tjko/projects.html
+		http://freshmeat.net/projects/jpegoptim/
 
-
+	GitHub fork by GlennR (from 1.2.3) available from:
+		http://
+	  (yeah I know there's a CVS repo at Freshmeat, but it needed some Git lovin.)
 
 Timo <tjko@iki.fi>
 30-Sep-2009
